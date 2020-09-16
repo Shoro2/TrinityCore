@@ -896,15 +896,13 @@ struct ItemBagFamilyEntry
     //uint32 Name_lang_mask;                                // 17
 };
 
-
+/*
 struct ItemDisplayInfoEntry
 {
-/*
-  */uint32 ID;/*                                            // 0
+    uint32 ID;                                              // 0
     char const* ModelName[2];                               // 1-2
     char const* ModelTexture[2];                            // 3-4
-  */char const* InventoryIcon;/*                            // 5
-    char const* InventoryIcon2;                             // 6
+    char const* InventoryIcon[2];                           // 5-6
     uint32 GeosetGroup[3];                                  // 7-9
     uint32 Flags;                                           // 10
     uint32 SpellVisualID;                                   // 11
@@ -913,9 +911,8 @@ struct ItemDisplayInfoEntry
     char const* Texture[8];                                 // 15-22
     int32 ItemVisual;                                       // 23
     uint32 ParticleColorID;                                 // 24
-*/
 };
-
+*/
 
 /*
 struct ItemCondExtCostsEntry
