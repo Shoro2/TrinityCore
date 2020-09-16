@@ -16,10 +16,18 @@
  */
 
 // This is where scripts' loading functions should be declared:
-
+void AddSC_item_upgrade_npc();
+void AddSC_mythic_dungeons();
+void AddSC_Dynamic_Resurrections();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
 void AddCustomScripts()
 {
+    AddSC_item_upgrade_npc();
+    AddSC_mythic_dungeons();
+    AddSC_Dynamic_Resurrections();
 }
+
+
+
