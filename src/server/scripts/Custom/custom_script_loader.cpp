@@ -19,6 +19,7 @@
 void AddSC_item_upgrade_npc();
 void AddSC_mythic_dungeons();
 void AddSC_Dynamic_Resurrections();
+void AddSC_area_speed();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -27,6 +28,7 @@ void AddCustomScripts()
     AddSC_item_upgrade_npc();
     AddSC_mythic_dungeons();
     AddSC_Dynamic_Resurrections();
+    AddSC_area_speed();
 }
 
 

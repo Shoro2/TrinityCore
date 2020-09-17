@@ -198,7 +198,7 @@ public:
 		item_upgrade_npcAI(Creature* creature) : ScriptedAI(creature) { }
 
 		// Called when a player opens a gossip dialog with the creature.
-		bool GossipHello(Player* player) override {
+		bool GossipHello(Player* player) {
 			data[player->GetGUID()].breadcrumbs = {};
 
 			AddGossipItemFor(player, GOSSIP_ICON_TABARD,
@@ -231,7 +231,7 @@ public:
 		}
 
 		// Called when a player selects a gossip item in the creature's gossip menu.
-		bool GossipSelect(Player* player, uint32 menuId, uint32 gossipListId) override {
+		bool GossipSelect(Player* player, uint32 menuId, uint32 gossipListId) {
 			uint32 action = GetGossipActionFor(player, gossipListId);
 
 			ClearGossipMenuFor(player);
