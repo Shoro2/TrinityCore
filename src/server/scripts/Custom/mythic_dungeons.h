@@ -12,9 +12,9 @@ enum SPELLS
     AURA_30         =   73822,
 
     // extra spells
-    SPELL_EXTRA_1   =   50590, // immolation aura
-    SPELL_EXTRA_2   =   6136,  // Chilled
-    SPELL_EXTRA_3   =   1,
+    SPELL_EXTRA_1   =   4086, // dodge 25%
+    SPELL_EXTRA_2   =   10220,  // Chilled
+    SPELL_EXTRA_3   =   64036, //5% dmg (per stack)
     SPELL_EXTRA_4   =   1,
 };
 
