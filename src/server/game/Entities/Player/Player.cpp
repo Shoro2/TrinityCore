@@ -104,6 +104,7 @@
 #include "LuaEngine.h"
 #endif
 #include "WorldStatePackets.h"
+#include "..\scripts\Custom\DynamicRes.h"
 
 #define ZONE_UPDATE_INTERVAL (1*IN_MILLISECONDS)
 
@@ -5031,13 +5032,19 @@ void Player::RepopAtGraveyard()
     // and don't show spirit healer location
     if (ClosestGrave)
     {
-        TeleportTo(ClosestGrave->Continent, ClosestGrave->Loc.X, ClosestGrave->Loc.Y, ClosestGrave->Loc.Z, GetOrientation(), shouldResurrect ? TELE_REVIVE_AT_TELEPORT : 0);
-        if (isDead())                                        // not send if alive, because it used in TeleportTo()
-        {
-            WorldPackets::Misc::DeathReleaseLoc packet;
-            packet.MapID = ClosestGrave->Continent;
-            packet.Loc = Position(ClosestGrave->Loc.X, ClosestGrave->Loc.Y, ClosestGrave->Loc.Z);
-            GetSession()->SendPacket(packet.Write());
+        //prefer dynamic res
+        if (sDynRes->IsInDungeonOrRaid(this) && sDynRes->CheckForSpawnPoint(this)) {
+            sDynRes->DynamicResurrection(this);
+        }
+        else {
+            TeleportTo(ClosestGrave->Continent, ClosestGrave->Loc.X, ClosestGrave->Loc.Y, ClosestGrave->Loc.Z, GetOrientation(), shouldResurrect ? TELE_REVIVE_AT_TELEPORT : 0);
+            if (isDead())                                        // not send if alive, because it used in TeleportTo()
+            {
+                WorldPackets::Misc::DeathReleaseLoc packet;
+                packet.MapID = ClosestGrave->Continent;
+                packet.Loc = Position(ClosestGrave->Loc.X, ClosestGrave->Loc.Y, ClosestGrave->Loc.Z);
+                GetSession()->SendPacket(packet.Write());
+            }
         }
     }
     else if (GetPositionZ() < GetMap()->GetMinHeight(GetPositionX(), GetPositionY()))
