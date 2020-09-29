@@ -417,9 +417,12 @@ class TC_GAME_API UnitScript : public ScriptObject
 
         // Called when Spell Damage is being Dealt
         virtual void ModifySpellDamageTaken(Unit* /*target*/, Unit* /*attacker*/, int32& /*damage*/) { }
-
+        
         // Called when an unit exits a vehicle
         virtual void ModifyVehiclePassengerExitPos(Unit* /*passenger*/, Vehicle* /*vehicle*/, Position& /*pos*/) { }
+
+        // Called when a unit starts evading
+        virtual void OnEvadeEnter(Unit* /*unit*/) { }
 };
 
 class TC_GAME_API CreatureScript : public ScriptObject
@@ -431,6 +434,9 @@ class TC_GAME_API CreatureScript : public ScriptObject
     public:
         // Called when an unit exits a vehicle
         virtual void ModifyVehiclePassengerExitPos(Unit* /*passenger*/, Vehicle* /*vehicle*/, Position& /*pos*/) { }
+
+        // Called when a unit starts evading
+        virtual void OnEvadeEnter(Creature* /*creature*/) { }
 
         // Called when a CreatureAI object is needed for the creature.
         virtual CreatureAI* GetAI(Creature* /*creature*/) const = 0;
@@ -959,6 +965,7 @@ class TC_GAME_API ScriptMgr
     public: /* CreatureScript */
 
         CreatureAI* GetCreatureAI(Creature* creature);
+        void OnEvadeEnter(Creature* creature);
 
     public: /* GameObjectScript */
 
@@ -1103,6 +1110,7 @@ class TC_GAME_API ScriptMgr
         void ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage);
         void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage);
         void ModifyVehiclePassengerExitPos(Unit* passenger, Vehicle* vehicle, Position& pos);
+        void OnEvadeEnter(Unit* unit);
 
     private:
         uint32 _scriptCount;

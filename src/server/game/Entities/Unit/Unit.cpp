@@ -4206,7 +4206,7 @@ void Unit::RemoveAurasOnEvade()
 {
     if (IsCharmedOwnedByPlayerOrPlayer()) // if it is a player owned creature it should not remove the aura
         return;
-
+    // TODO: Add ZoneScript:OnCreatureEvade()
     // don't remove vehicle auras, passengers aren't supposed to drop off the vehicle
     // don't remove clone caster on evade (to be verified)
     RemoveAllAurasExceptType(SPELL_AURA_CONTROL_VEHICLE, SPELL_AURA_CLONE_CASTER);
@@ -8737,6 +8737,7 @@ void Unit::setDeathState(DeathState s)
 void Unit::AtExitCombat()
 {
     RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_LEAVE_COMBAT);
+    sScriptMgr->OnEvadeEnter(this);
 }
 
 void Unit::AtTargetAttacked(Unit* target, bool canInitialAggro)

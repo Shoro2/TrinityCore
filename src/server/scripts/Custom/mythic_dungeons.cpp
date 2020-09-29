@@ -12,6 +12,18 @@
 #include "ObjectMgr.h"
 #include "LootItemStorage.h"
 #include "LootMgr.h"
+/*
+* todo: refresh buff on creatuture evade/reset
+class mythic_dungeon_instance : public InstanceScript {
+public:
+    mythic_dungeon_instance() : InstanceScript(mythic_dungeon_instance) {
+
+    }
+};
+*/
+
+
+
 
 class mythic_dungeon_player : public PlayerScript {
 public:
@@ -25,12 +37,12 @@ public:
 
     virtual void OnCreatureKill(Player* killer, Creature* killed) {
         Map* newMap = killer->GetMap();
-        if (newMap->IsDungeon() && killed->GetLevel()==80) {
+        if (newMap->IsDungeon() && killed->GetLevel()>=80 && !killed->IsCritter()) {
             //roll for it
-            if (Group* grp = killer->GetGroup()) {
+            Group* grp = killer->GetGroup();
+            uint32 grpMemberCount = grp->GetMemberSlots().max_size();
+            if (grp) {
                 Loot* const loot(&killed->loot);
-                //uint32 _itemid, uint32 _reference, float _chance, bool _needs_quest, uint16 _lootmode, uint8 _groupid, int32 _mincount, uint8 _maxcount CAN THIS WORK?!
-                uint32 grpMemberCount = grp->GetMemberSlots().max_size();
                 if (killed->IsDungeonBoss() || killed->isWorldBoss()) loot->AddItem(LootStoreItem(400000, 0, 100, false, LOOT_MODE_DEFAULT, grp->GetGUID(), grpMemberCount, grpMemberCount));
                 else loot->AddItem(LootStoreItem(400000, 0, 100, false, LOOT_MODE_DEFAULT, grp->GetGUID(), 1, 1));
             }
@@ -308,8 +320,11 @@ public:
         if (!creature->HasAura(AURA_5) || !creature->HasAura(AURA_10) || !creature->HasAura(AURA_15) || !creature->HasAura(AURA_20) || !creature->HasAura(AURA_25) || !creature->HasAura(AURA_30)) {
             //dmg health buff 
             uint32 stacks = plvl - clvl;
-            if (stacks < 0) stacks = 0;
-            creature->SetAuraStack(SPELL_EXTRA_3, creature, stacks);
+            if (stacks < 0 || creature->isWorldBoss() || creature->IsDungeonBoss()) {
+                stacks = 0;
+            }
+            else creature->SetAuraStack(SPELL_EXTRA_3, creature, stacks);
+            
             creature->SetMaxHealth(creature->GetMaxHealth() * (2 + stacks * 0.3));
         }
         

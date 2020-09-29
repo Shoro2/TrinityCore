@@ -1,5 +1,16 @@
+#include "Define.h"
+#include "ScriptMgr.h"
+#include "SharedDefines.h"
+#include "Unit.h"
 #include "Player.h"
-#include "DBCStores.h"
+#include <Chat.h>
+#include "spell.h"
+#include "Group.h"
+#include "item.h"
+#include "ObjectAccessor.h"
+#include "ObjectMgr.h"
+#include "LootItemStorage.h"
+#include "LootMgr.h"
 
 enum SPELLS
 {

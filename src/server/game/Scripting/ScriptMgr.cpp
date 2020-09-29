@@ -2394,6 +2394,16 @@ void ScriptMgr::ModifyVehiclePassengerExitPos(Unit* passenger, Vehicle* vehicle,
     FOREACH_SCRIPT(CreatureScript)->ModifyVehiclePassengerExitPos(passenger, vehicle, pos);
 }
 
+void ScriptMgr::OnEvadeEnter(Unit* unit)
+{
+    FOREACH_SCRIPT(UnitScript)->OnEvadeEnter(unit);
+}
+
+void ScriptMgr::OnEvadeEnter(Creature* creature)
+{
+    FOREACH_SCRIPT(CreatureScript)->OnEvadeEnter(creature);
+}
+
 SpellScriptLoader::SpellScriptLoader(char const* name)
     : ScriptObject(name)
 {
