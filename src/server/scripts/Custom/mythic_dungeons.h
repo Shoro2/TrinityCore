@@ -11,9 +11,13 @@
 #include "ObjectMgr.h"
 #include "LootItemStorage.h"
 #include "LootMgr.h"
+#include "WorldDatabase.h"
 
 enum SPELLS
 {
+    // Info Buff
+    BUFF_INFO       =   500100,
+
     // percentage buffs
     AURA_5          =   73816,
     AURA_10         =   73818,
@@ -23,9 +27,9 @@ enum SPELLS
     AURA_30         =   73822,
 
     // extra spells
-    SPELL_EXTRA_1   =   4086, // dodge 25%
-    SPELL_EXTRA_2   =   10220,  // Chilled
-    SPELL_EXTRA_3   =   64036, //5% dmg (per stack)
+    SPELL_EXTRA_1   =   500102, // dodge 25%
+    SPELL_EXTRA_2   =   500103,  // Ice Armor
+    SPELL_EXTRA_3   =   500101, //5% dmg (per stack)
     SPELL_EXTRA_4   =   1,
 };
 

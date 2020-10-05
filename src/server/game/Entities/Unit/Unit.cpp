@@ -4210,6 +4210,7 @@ void Unit::RemoveAurasOnEvade()
     // don't remove vehicle auras, passengers aren't supposed to drop off the vehicle
     // don't remove clone caster on evade (to be verified)
     RemoveAllAurasExceptType(SPELL_AURA_CONTROL_VEHICLE, SPELL_AURA_CLONE_CASTER);
+    sScriptMgr->OnEvadeEnter(this);
 }
 
 void Unit::RemoveAllAurasOnDeath()
@@ -8737,7 +8738,7 @@ void Unit::setDeathState(DeathState s)
 void Unit::AtExitCombat()
 {
     RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_LEAVE_COMBAT);
-    sScriptMgr->OnEvadeEnter(this);
+    
 }
 
 void Unit::AtTargetAttacked(Unit* target, bool canInitialAggro)
