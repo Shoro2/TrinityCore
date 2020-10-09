@@ -771,10 +771,11 @@ void Creature::Update(uint32 diff)
                     _spellFocusInfo.Delay -= diff;
             }
 
+            if(IsInEvadeMode()) sScriptMgr->OnEvadeEnter(this);
+
             // periodic check to see if the creature has passed an evade boundary
             if (IsAIEnabled() && !IsInEvadeMode() && IsEngaged())
             {
-                sScriptMgr->OnEvadeEnter(this);
                 if (diff >= m_boundaryCheckTime)
                 {
                     AI()->CheckInRoom();

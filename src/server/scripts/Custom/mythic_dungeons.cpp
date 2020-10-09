@@ -14,9 +14,15 @@
 #include "LootMgr.h"
 #include "WorldDatabase.h"
 #include "DatabaseEnv.h"
+#include "Log.h"
+#include <iostream>
+#include <string>
+#include "GameTime.h"
 /*
 * todo: refresh buff on creatuture evade/reset
 * */
+
+
 
 class mythic_dungeon_unit : public UnitScript {
 public:
@@ -38,30 +44,6 @@ public:
     }
 };
 
-class mythic_dungeon_creature : public CreatureScript {
-public:
-    mythic_dungeon_creature() : CreatureScript("mythic_dungeon_creature") {
-
-    }
-
-    virtual void OnEvadeEnter(Creature* creature) {
-        Map* myMap = creature->GetMap();
-        if (myMap->IsDungeon()) {
-            uint32 playerCount = myMap->GetPlayersCountExceptGMs();
-            if (playerCount > 0) {
-                Map::PlayerList const& players = myMap->GetPlayers();
-                Player* myPlayer = players.getFirst()->GetSource();
-                Group* grp = myPlayer->GetGroup();
-                ChatHandler(myPlayer->GetSession()).SendSysMessage("Creature OnEvadeEnter()");
-            }
-        }
-    }
-};
-
-
-
-
-
 class mythic_dungeon_player : public PlayerScript {
 public:
     mythic_dungeon_player() : PlayerScript("mythic_dungeon_player") {
@@ -78,7 +60,7 @@ public:
 
     virtual void OnCreatureKill(Player* killer, Creature* killed) {
         // add dungeon mark if killed has the mythic dungeon buff
-        if (killed->HasAura(500100)) {
+        if (killer->HasAura(500104)) {
             Map* newMap = killer->GetMap();
             if (newMap->IsDungeon() && killed->GetLevel() >= 80 && !killed->IsCritter()) {
                 //roll for it
@@ -96,97 +78,98 @@ public:
                 }
             }
         }
+
+        // TODO: Check if creature is dungeon end boss to end the run and add awards
+
+
     }
 
     void StartRun(Player* player) {
         Map* myMap = player->GetMap();
-        if (myMap->IsDungeon() || myMap->IsRaid()) {
-            // check if run is in progress
-            WorldDatabasePreparedStatement* stmt = WorldDatabase.GetPreparedStatement(WORLD_SEL_MYTHIC_DUNGEON);
-            // is this correct? i want to insert the playername into the sql statement
-            stmt->setString(0, player->GetName());
-            QueryResult myResult = WorldDatabase.PQuery(stmt);
-            if (myResult) {
-                //already in progress
-            }
-            else {
-                //start new run
-                uint32 keyCount = player->GetItemCount(100000, false);
-                if (keyCount > 0) {
-                    ChatHandler(player->GetSession()).SendSysMessage("You have started a |cff4CFF00Mythic Dungeon|r Run. Good Luck!");
-                    uint32 plvl = player->GetLevel();
-                    Map::CreatureBySpawnIdContainer container = myMap->GetCreatureBySpawnIdStore();
-                    //apply buffs to all dunegon npc by key count
-                    switch (keyCount) {
-                    case 1:
-                        ChatHandler(player->GetSession()).SendSysMessage(player->GetName() + "'s Key (Level 1): Boosting all NPCs by 5%.");
-                        for (auto npc : container) {
-                            ApplyMythicBuffs(1, npc.second, plvl);
-                        }
-                        break;
-                    case 2:
-                        ChatHandler(player->GetSession()).SendSysMessage(player->GetName() + "'s Key (Level 2): Boosting all NPCs by 10%.");
-                        for (auto npc : container) {
-                            ApplyMythicBuffs(2, npc.second, plvl);
-                        }
-                        break;
-                    case 3:
-                        ChatHandler(player->GetSession()).SendSysMessage(player->GetName() + "'s Key (Level 3): Boosting all NPCs by 15% and applying 1 additional aura.");
-                        for (auto npc : container) {
-                            ApplyMythicBuffs(3, npc.second, plvl);
-                        }
-                        break;
-                    case 4:
-                        ChatHandler(player->GetSession()).SendSysMessage(player->GetName() + "'s Key (Level 4): Boosting all NPCs by 20% and applying 2 additional auras.");
-                        for (auto npc : container) {
-                            ApplyMythicBuffs(4, npc.second, plvl);
-                        }
-                        break;
-                    case 5:
-                        ChatHandler(player->GetSession()).SendSysMessage(player->GetName() + "'s Key (Level 5): Boosting all NPCs by 25% and applying 2 additional auras and extra health.");
-                        for (auto npc : container) {
-                            ApplyMythicBuffs(5, npc.second, plvl);
-                        }
-                        break;
-                    default:
-                        ChatHandler(player->GetSession()).SendSysMessage("You have entered a |cff4CFF00Mythic Dungeon |r.");
-                        break;
-                    }
-                }
-                else {
-                    ChatHandler(player->GetSession()).SendSysMessage("You need a |cffFF3D14Mythic Key|r before starting a mythic dungeon run.");
-                }
-            }
-
-
-
-
+        ChatHandler myCH = ChatHandler(player->GetSession());
+        // check if run is in progress
+        //WorldDatabasePreparedStatement* stmt = WorldDatabase.GetPreparedStatement(WORLD_SEL_MYTHIC_DUNGEON);
+        // is this correct? i want to insert the playername into the sql statement
+        //stmt->setString(0, player->GetName());
+        auto const pName = player->GetName();
+        //start new run
+        WorldDatabase.PQuery("INSERT INTO custom_speedruns_runs (player, dungeon, tstart, bosses_left) VALUES ('" + pName + "','" + myMap->GetMapName() + "','" + std::to_string(GameTime::GetGameTime()) + "',0)");
+        uint32 keyCount = player->GetItemCount(100000, false);
+        TC_LOG_DEBUG("LOG_LEVEL_DEBUG", "Mythic Dungeon: Player %s started a new a run.", pName);
+        player->AddAura(BUFF_INFO_PLAYER, player);
+        // TODO: Party run
+        if (Group* grp = player->GetGroup()) {
+            Group::MemberSlotList myList = grp->GetMemberSlots();
+            myList.begin();
+            
         }
         else {
-            ChatHandler(player->GetSession()).SendSysMessage("You need to enter a dungeon or raid to start a mythic dungeon run.");
+            player->SetAuraStack(BUFF_INFO_PLAYER, player, keyCount);
         }
+
+
+        
+        //apply buffs to all dunegon npc
+        Map::CreatureBySpawnIdContainer container = myMap->GetCreatureBySpawnIdStore();
+        myCH.SendSysMessage("Activated " + pName + "'s Key (Level "+std::to_string(keyCount)+"): Good Luck.");
+        uint32 plvl = player->GetLevel();
+        for (auto npc : container) {
+            ApplyMythicBuffs(keyCount, npc.second, plvl);
+        }
+
+
+
+
+
     }
 
     void OnSpellCast(Player* player, Spell* spell, bool skipCheck) {
+        ChatHandler myCH = ChatHandler(player->GetSession());
+        Position myPos = player->GetPosition();
+        Map* myMap = player->GetMap();
+        auto const pName = player->GetName();
         //Mythic Dungeon starting spell
-        if (spell->GetSpellInfo()->Id == 500000) {
-            //party run
-            if (Group* grp = player->GetGroup()) {
-                //only leader can start
-                if (grp->GetLeaderName() == player->GetName()) {
-                    //in dungeon/raid
-                    StartRun(player);
+        if (myMap->IsDungeon() || myMap->IsRaid()) {
+            if (spell->GetSpellInfo()->Id == 500000 && player->GetLevel() >= 80 && !player->IsInCombat()) {
+                //party run
+                if (Group* grp = player->GetGroup()) {
+                    //only leader can start
+                    if (grp->GetLeaderName() != player->GetName()) {
+                        myCH.SendSysMessage("Only the party leader can start a mythic dungeon run.");
+                        return;
+                    }
                 }
+                //solo run
                 else {
-                    ChatHandler(player->GetSession()).SendSysMessage("Only the party leader can start a mythic dungeon run.");
+                    TC_LOG_DEBUG("LOG_LEVEL_DEBUG", "Mythic Dungeon: Query -> SELECT * FROM world.custom_speedruns_runs WHERE player = '%s'", pName);
+                    bool found = false;
+                    if (QueryResult myResult = WorldDatabase.PQuery("SELECT * FROM world.custom_speedruns_runs WHERE player = '" + pName + "'")) {
+                        do {
+                            Field* myField = myResult->Fetch();
+                            auto const rName = myField[0].GetString();
+                            if (rName == pName) found = true;
+                        } while (myResult->NextRow());
+                    }
+                    if (found) {
+                        //already in progress
+                        TC_LOG_DEBUG("LOG_LEVEL_DEBUG", "Mythic Dungeon: Player %s is already in a run.", pName);
+                        myCH.SendSysMessage("Already in progress!");
+                    }
+                    else {
+                        uint32 keyCount = player->GetItemCount(100000, false);
+                        if (keyCount > 0) {
+                            StartRun(player);
+                        }
+                        else {
+                            myCH.SendSysMessage("You need a |cffFF3D14Mythic Key|r before starting a mythic dungeon run.");
+                        }
+                    }
                 }
-            }
-            //solo run
-            else {
-                StartRun(player);
             }
         }
-
+        else {
+            myCH.SendSysMessage("You need to enter a dungeon or raid to start a mythic dungeon run.");
+        }
     }
 
     virtual void OnMapChanged(Player* player) {
@@ -196,21 +179,32 @@ public:
     void ApplyMythicBuffs(uint32 level, Creature* creature, uint32 plvl) {
         uint32 clvl = creature->GetLevel();
         // set level first (overrides hp mod)
-        if (creature->GetLevel() != plvl) creature->SetLevel(plvl);
-        //apply hp mod/dmg buff on new npcs
-        if (!creature->HasAura(BUFF_INFO)) {
+        if (!creature->HasAura(BUFF_INFO_NPC)) {
             uint32 stacks = plvl - clvl;
-            if (stacks < 0 || creature->isWorldBoss() || creature->IsDungeonBoss()) {
-                stacks = 0;
+            if (stacks < 0)  stacks = 0;
+            //mods for world bosses only
+            if (creature->isWorldBoss()) {
+                creature->SetAuraStack(AURA_DMG_5, creature, level * 5);
+                creature->SetMaxHealth(creature->GetMaxHealth() * level);
             }
+            //mods for dungeon bosses only
+            else if (creature->IsDungeonBoss()) {
+                if (creature->GetLevel() != plvl) creature->SetLevel(plvl + 3);
+                creature->SetAuraStack(AURA_DMG_5, creature, stacks + level * 5);
+                creature->SetMaxHealth(creature->GetMaxHealth() * level + stacks * 0.3);
+            }
+            //mods for non bosses only
+            else {
+                if (creature->GetLevel() != plvl) creature->SetLevel(plvl + 1);
+                creature->SetAuraStack(AURA_DMG_5, creature, stacks + level * 5);
+                creature->SetMaxHealth(creature->GetMaxHealth() * (level + stacks * 0.3));
 
-            creature->SetAuraStack(SPELL_EXTRA_3, creature, stacks);
-            creature->AddAura(BUFF_INFO, creature);
-            creature->SetMaxHealth(creature->GetMaxHealth() * (level + stacks * 0.3));
+            }
+            creature->AddAura(BUFF_INFO_NPC, creature);
+            // apply suffixes
+            if (level >= 2) creature->AddAura(SPELL_EXTRA_1, creature);
+            if (level >= 4) creature->AddAura(SPELL_EXTRA_2, creature);
         }
-        // apply suffixes
-        if (level >= 2) creature->AddAura(SPELL_EXTRA_1, creature);
-        if (level >= 4) creature->AddAura(SPELL_EXTRA_2, creature);
     }
 };
 

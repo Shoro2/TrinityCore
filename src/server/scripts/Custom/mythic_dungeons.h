@@ -16,20 +16,23 @@
 enum SPELLS
 {
     // Info Buff
-    BUFF_INFO       =   500100,
+    BUFF_INFO_NPC       =       500100,
+    BUFF_INFO_PLAYER    =       500105,
 
     // percentage buffs
-    AURA_5          =   73816,
-    AURA_10         =   73818,
-    AURA_15         =   73819,
-    AURA_20         =   73820,
-    AURA_25         =   73821,
-    AURA_30         =   73822,
+    AURA_5              =       73816,
+    AURA_10             =       73818,
+    AURA_15             =       73819,
+    AURA_20             =       73820,
+    AURA_25             =       73821,
+    AURA_30             =       73822,
+
+    AURA_DMG_5          =       500101, //5% dmg (per stack)
 
     // extra spells
-    SPELL_EXTRA_1   =   500102, // dodge 25%
-    SPELL_EXTRA_2   =   500103,  // Ice Armor
-    SPELL_EXTRA_3   =   500101, //5% dmg (per stack)
-    SPELL_EXTRA_4   =   1,
+    SPELL_EXTRA_1       =       500102, // dodge 25%
+    SPELL_EXTRA_2       =       500103,  // Ice Armor
+    
+    SPELL_EXTRA_4       =       1,
 };
 
