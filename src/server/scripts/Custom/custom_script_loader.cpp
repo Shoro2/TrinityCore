@@ -21,6 +21,8 @@ void AddSC_mythic_dungeons();
 void AddSC_Dynamic_Resurrections();
 void AddSC_area_speed();
 void AddSC_AutoLoot();
+void AddSC_mythic_dungeons();
+void AddSC_custom_spells();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -31,6 +33,8 @@ void AddCustomScripts()
     AddSC_Dynamic_Resurrections();
     AddSC_area_speed();
     AddSC_AutoLoot();
+    AddSC_mythic_dungeons();
+    AddSC_custom_spells();
 }
 
 
