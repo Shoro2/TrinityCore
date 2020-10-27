@@ -9,9 +9,9 @@
 #include <string>
 #include <Chat.h>
 
-class custom_spells : public PlayerScript {
+class custom_spells_player : public PlayerScript {
 public:
-    custom_spells() : PlayerScript("custom_spells_player") {
+    custom_spells_player() : PlayerScript("custom_spells_player") {
     }
 
     void OnCreatureKill(Player* killer, Creature* killed) {
@@ -36,7 +36,7 @@ public:
 
 
 
-void AddSC_mythic_dungeons()
+void AddSC_custom_spells()
 {
-    new custom_spells();
+    new custom_spells_player();
 }

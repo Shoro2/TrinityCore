@@ -36,3 +36,9 @@ enum SPELLS
     SPELL_EXTRA_4       =       1,
 };
 
+enum ITEMS
+{
+    ITEM_KEY            =       100000,
+    ITEM_MARK           =       400000,
+};
+
