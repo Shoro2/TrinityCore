@@ -113,74 +113,81 @@ public:
     }
 
     virtual void OnCreatureKill(Player* killer, Creature* killed) {
-        // add dungeon mark if killed has the mythic dungeon buff
+        // loot/score
+        std::string pName;
         if (killer->HasAura(BUFF_INFO_PLAYER)) {
             Map* newMap = killer->GetMap();
             if (newMap->IsDungeon() && killed->GetLevel() >= 80 && !killed->IsCritter()) {
                 //roll for it
                 Group* grp = killer->GetGroup();
                 uint32 grpMemberCount = grp->GetMemberSlots().max_size();
+                // add dungeon mark if killed has the mythic dungeon buff
                 if (grp) {
                     Loot* const loot(&killed->loot);
+                    pName = grp->GetLeaderName();
                     if (killed->IsDungeonBoss() || killed->isWorldBoss()) loot->AddItem(LootStoreItem(ITEM_MARK, 0, 100, false, LOOT_MODE_DEFAULT, grp->GetGUID(), grpMemberCount, grpMemberCount));
                     else loot->AddItem(LootStoreItem(ITEM_MARK, 0, 100, false, LOOT_MODE_DEFAULT, grp->GetGUID(), 1, 1));
                 }
                 //add it to inventory
                 else {
+                    pName = killer->GetName();
                     if (killed->IsDungeonBoss() || killed->isWorldBoss()) killer->AddItem(400000, 5);
                     else killer->AddItem(ITEM_MARK, 1);
                 }
-            }
-        }
-
-        if (killed->IsDungeonBoss() || killed->isWorldBoss()) {
-            
-            auto const mapName = killer->GetMap()->GetMapName();
-            if (QueryResult myResult = WorldDatabase.PQuery("SELECT * FROM world.custom_speedruns_dungeons WHERE name = '%s'", mapName)) {
-                Field* myField = myResult->Fetch();
-                uint32 maxBosses = myField[1].GetUInt32();
-                for (uint32 i = 0; i < maxBosses; i++) {
-                    uint32 myEntry = killed->GetEntry();
-                    uint32 bossEntry = myField[2 + i].GetUInt32();
-                    if (myEntry == bossEntry) {
-                        ChatHandler myCH = ChatHandler(killer->GetSession());
-                        auto const pName = killer->GetName();
-                        if (QueryResult myResult = WorldDatabase.PQuery("SELECT * FROM world.custom_speedruns_runs WHERE player = '%s'", pName)) {
-                            Field* myField = myResult->Fetch();
-                            uint32 bossesLeft = myField[4].GetUInt32();
-                            if (bossesLeft >= 2) {
-                                //update run, boss  down
-                                WorldDatabase.PQuery("UPDATE world.custom_speedruns_runs SET bosses_left = bosses_left - 1 WHERE player = '%s'", pName);
-                                myCH.SendSysMessage("Downed Boss " + killed->GetName() + ", " + std::to_string(bossesLeft - 1) + " bosses left to finish the run.");
+                WorldDatabase.PQuery("UPDATE world.custom_speedruns_runs SET score = score + 1 WHERE player = '%s'", pName);
+                // dungeonboss down?
+                if (killed->IsDungeonBoss() || killed->isWorldBoss()) {
+                    auto const mapName = newMap->GetMapName();
+                    if (QueryResult myResult = WorldDatabase.PQuery("SELECT * FROM world.custom_speedruns_dungeons WHERE name = '%s'", mapName)) {
+                        Field* myField_dungeons = myResult->Fetch();
+                        uint32 maxBosses = myField_dungeons[1].GetUInt32();
+                        for (uint32 i = 0; i < maxBosses; i++) {
+                            //mythic dungeon boss?
+                            uint32 myEntry = killed->GetEntry();
+                            uint32 bossEntry = myField_dungeons[2 + i].GetUInt32();
+                            if (myEntry == bossEntry) {
+                                ChatHandler myCH = ChatHandler(killer->GetSession());
+                                //check for active run
+                                if (QueryResult myResult = WorldDatabase.PQuery("SELECT * FROM world.custom_speedruns_runs WHERE player = '%s'", pName)) {
+                                    Field* myField_runs = myResult->Fetch();
+                                    uint32 bossesLeft = myField_runs[4].GetUInt32();
+                                    uint32 score = myField_runs[5].GetUInt32();
+                                    if (bossesLeft >= 2) {
+                                        //update run, boss  down
+                                        WorldDatabase.PQuery("UPDATE world.custom_speedruns_runs SET bosses_left = bosses_left - 1 WHERE player = '%s'", pName);
+                                        myCH.SendSysMessage("Downed Boss " + killed->GetName() + ", " + std::to_string(bossesLeft - 1) + " bosses left to finish the run.");
+                                    }
+                                    else if (bossesLeft = 1) {
+                                        //end run
+                                        WorldDatabase.PQuery("DELETE FROM world.custom_speedruns_runs WHERE player = '%s'", pName);
+                                        uint32 timeStart = myField_runs[2].GetUInt32();
+                                        uint32 timeNow = GameTime::GetGameTime();
+                                        uint32 timeNeeded = timeNow - timeStart;
+                                        uint32 timeMax = myField_dungeons[23].GetUInt32();
+                                        // successfull run
+                                        if (timeNeeded < timeMax) {
+                                            uint32 finalScore = score + (timeMax - timeNeeded);
+                                            WorldDatabase.PQuery("INSERT into world.custom_speedruns_results (dungeon, player, time, score) VALUES ('%s', '" + pName + "', " + std::to_string(timeNeeded) + ", " + std::to_string(finalScore) + ")", mapName);
+                                            myCH.SendSysMessage("Finished the mythic dungeon run for %s:", mapName);
+                                            if (grp)  myCH.SendSysMessage("Leader: " + pName);
+                                            else myCH.SendSysMessage("Player: " + pName);
+                                            myCH.SendSysMessage("Seconds Needed: " + std::to_string(timeNeeded));
+                                            myCH.SendSysMessage("Score: " + std::to_string(finalScore));
+                                            
+                                        }
+                                    }
+                                }
                             }
-                            else if (bossesLeft = 1) {
-                                //end run
-                                WorldDatabase.PQuery("DELETE FROM world.custom_speedruns_runs WHERE player = '%s'", pName);
-                                myCH.SendSysMessage("Finished the mythic dungeon run for %s:", mapName);
-                                //todo: calc score and add rewards
-                            }
-
-
-
                         }
-                        
                     }
                 }
-                
             }
-            
         }
-
     }
 
     void StartRun(Player* player) {
         Map* myMap = player->GetMap();
-        
         ChatHandler myCH = ChatHandler(player->GetSession());
-        // check if run is in progress
-        //WorldDatabasePreparedStatement* stmt = WorldDatabase.GetPreparedStatement(WORLD_SEL_MYTHIC_DUNGEON);
-        // is this correct? i want to insert the playername into the sql statement
-        //stmt->setString(0, player->GetName());
         auto const pName = player->GetName();
         //start new run
         uint32 keyCount = player->GetItemCount(ITEM_KEY, false);
@@ -193,7 +200,7 @@ public:
             WorldDatabase.PQuery("INSERT INTO custom_speedruns_runs (player, dungeon, tstart, bosses_left, keylevel, instanceid, dungeonlevel) VALUES ('" + pName + "','" + myMap->GetMapName() + "','" + std::to_string(GameTime::GetGameTime()) + "'," + std::to_string(maxBosses) + ", " + std::to_string(keyCount) + "," + std::to_string(myId) + "," + std::to_string(dungeonLevel) + ")");
             TC_LOG_DEBUG("LOG_LEVEL_DEBUG", "Mythic Dungeon: Player %s started a new a run.", pName);
             player->AddAura(BUFF_INFO_PLAYER, player);
-            // TODO: Party run
+            // Is this working?!
             if (Group* grp = player->GetGroup()) {
                 Group::MemberSlotList myList = grp->GetMemberSlots();
                 for (const auto& member : myList) {
@@ -208,9 +215,8 @@ public:
             //apply buffs to all dunegon npc
             Map::CreatureBySpawnIdContainer container = myMap->GetCreatureBySpawnIdStore();
             myCH.SendSysMessage("Activated " + pName + "'s Key (Level " + std::to_string(keyCount) + "): Good Luck.");
-            uint32 plvl = player->GetLevel();
             for (auto npc : container) {
-                ApplyMythicBuffs(keyCount, npc.second, plvl);
+                ApplyMythicBuffs(keyCount, npc.second, dungeonLevel);
             }
         }
     }
@@ -271,19 +277,28 @@ public:
 
     }
 
-    void ApplyMythicBuffs(uint32 level, Creature* creature, uint32 plvl) {
-        uint32 clvl = creature->GetLevel();
-        // set level first (overrides hp mod)
+    void ApplyMythicBuffs(uint32 level, Creature* creature, uint32 dungeonLevel) {
         if (!creature->HasAura(BUFF_INFO_NPC)) {
-            uint32 stacks = plvl - clvl;
+            creature->AddAura(BUFF_INFO_NPC, creature);
+            creature->SetLevel(1);
+            creature->SetLevel(83);
+            uint32 stacks = 80 - dungeonLevel;
             if (stacks < 0)  stacks = 0;
-
-            if (creature->GetLevel() < plvl) creature->SetLevel(plvl + 1);
+            //mods for world bosses only
+            if (creature->isWorldBoss()) {
+                creature->SetAuraStack(AURA_DMG_5, creature, level * 5);
+                creature->SetMaxHealth(creature->GetMaxHealth() * level);
+            }
+            //mods for dungeon bosses only
+            else if (creature->IsDungeonBoss()) {
+                creature->SetAuraStack(AURA_DMG_5, creature, stacks + level * 5);
+                creature->SetMaxHealth(creature->GetMaxHealth() * level + stacks * 0.3);
+            }
+            //mods for non bosses only
+            else {
                 creature->SetAuraStack(AURA_DMG_5, creature, stacks + level * 5);
                 creature->SetMaxHealth(creature->GetMaxHealth() * (level + stacks * 0.3));
-
-            
-            creature->AddAura(BUFF_INFO_NPC, creature);
+            }
             // apply suffixes
             if (level >= 2) creature->AddAura(SPELL_EXTRA_1, creature);
             if (level >= 4) creature->AddAura(SPELL_EXTRA_2, creature);
