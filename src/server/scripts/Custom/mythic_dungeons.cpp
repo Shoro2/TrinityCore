@@ -98,6 +98,14 @@ public:
 
     virtual void OnPlayerKilledByCreature(Creature* killer, Player* killed) {
         //todo: time lost
+        std::string pName;
+        Group* grp = killed->GetGroup();
+        if (grp) pName = grp->GetLeaderName();
+        else pName = killed->GetName();
+        if (QueryResult myResult = WorldDatabase.PQuery("SELECT * FROM world.custom_speedruns_runs WHERE player = " + pName + "")) {
+            WorldDatabase.PQuery("UPDATE world.custom_speedruns_runs SET score = score - 10 WHERE player = '%s'", pName);
+        }
+        
     }
 
     virtual void OnPlayerBindToInstance(Player* player, Difficulty difficulty, uint32 mapid, bool permanent, uint8 extendState) {
@@ -120,9 +128,9 @@ public:
             if (newMap->IsDungeon() && killed->GetLevel() >= 80 && !killed->IsCritter()) {
                 //roll for it
                 Group* grp = killer->GetGroup();
-                uint32 grpMemberCount = grp->GetMemberSlots().max_size();
                 // add dungeon mark if killed has the mythic dungeon buff
                 if (grp) {
+                    uint32 grpMemberCount = grp->GetMemberSlots().max_size();
                     Loot* const loot(&killed->loot);
                     pName = grp->GetLeaderName();
                     if (killed->IsDungeonBoss() || killed->isWorldBoss()) loot->AddItem(LootStoreItem(ITEM_MARK, 0, 100, false, LOOT_MODE_DEFAULT, grp->GetGUID(), grpMemberCount, grpMemberCount));
@@ -141,16 +149,21 @@ public:
                     if (QueryResult myResult = WorldDatabase.PQuery("SELECT * FROM world.custom_speedruns_dungeons WHERE name = '%s'", mapName)) {
                         Field* myField_dungeons = myResult->Fetch();
                         uint32 maxBosses = myField_dungeons[1].GetUInt32();
-                        for (uint32 i = 0; i < maxBosses; i++) {
+                        uint32 myEntry = killed->GetEntry();
+                        for (uint32 i = 0; i < 20; i++) {
                             //mythic dungeon boss?
-                            uint32 myEntry = killed->GetEntry();
                             uint32 bossEntry = myField_dungeons[2 + i].GetUInt32();
+                            //todo check for hc mode (additional bosses?!)
                             if (myEntry == bossEntry) {
                                 ChatHandler myCH = ChatHandler(killer->GetSession());
                                 //check for active run
                                 if (QueryResult myResult = WorldDatabase.PQuery("SELECT * FROM world.custom_speedruns_runs WHERE player = '%s'", pName)) {
                                     Field* myField_runs = myResult->Fetch();
                                     uint32 bossesLeft = myField_runs[4].GetUInt32();
+                                    if (newMap->IsHeroic()) {
+                                        uint32 extraBosses = myField_dungeons[24].GetUInt32();
+                                        bossesLeft = bossesLeft + extraBosses;
+                                    }
                                     uint32 score = myField_runs[5].GetUInt32();
                                     if (bossesLeft >= 2) {
                                         //update run, boss  down
@@ -166,6 +179,7 @@ public:
                                         uint32 timeMax = myField_dungeons[23].GetUInt32();
                                         // successfull run
                                         if (timeNeeded < timeMax) {
+                                            //stats
                                             uint32 finalScore = score + (timeMax - timeNeeded);
                                             WorldDatabase.PQuery("INSERT into world.custom_speedruns_results (dungeon, player, time, score) VALUES ('%s', '" + pName + "', " + std::to_string(timeNeeded) + ", " + std::to_string(finalScore) + ")", mapName);
                                             myCH.SendSysMessage("Finished the mythic dungeon run for %s:", mapName);
@@ -173,7 +187,22 @@ public:
                                             else myCH.SendSysMessage("Player: " + pName);
                                             myCH.SendSysMessage("Seconds Needed: " + std::to_string(timeNeeded));
                                             myCH.SendSysMessage("Score: " + std::to_string(finalScore));
-                                            
+                                            //rewards
+                                            if (grp) {
+                                                Group::MemberSlotList myList = grp->GetMemberSlots();
+                                                for (const auto& member : myList) {
+                                                    myCH.SendSysMessage(member.name);
+                                                    Player* partyMember = ObjectAccessor::FindConnectedPlayer(member.guid);
+                                                    ChatHandler partyCH = ChatHandler(partyMember->GetSession());
+                                                    uint32 rewardMoney = finalScore * 100;
+                                                    partyMember->ModifyMoney(partyMember->GetMoney() + rewardMoney);
+                                                    partyMember->AddItem(ITEM_MARK, finalScore);
+                                                    partyCH.SendSysMessage("Added " + std::to_string(rewardMoney) + " Copper and " + std::to_string(finalScore) + " mythic dungeon marks as reward.");
+                                                }
+                                            }
+                                            else {
+
+                                            }
                                         }
                                     }
                                 }
@@ -196,6 +225,9 @@ public:
         if (QueryResult myResult = WorldDatabase.PQuery("SELECT * FROM world.custom_speedruns_dungeons WHERE name='%s'", mapName)) {
             Field* myField = myResult->Fetch();
             uint32 dungeonLevel = myField[22].GetUInt32();
+            //hc version of dungeon?
+            if (dungeonLevel < 70 && dungeonLevel >= 60 && myMap->IsHeroic()) dungeonLevel = 70;
+            else if (dungeonLevel < 80 && dungeonLevel >= 70 && myMap->IsHeroic()) dungeonLevel = 80;
             uint32 maxBosses = myField[1].GetUInt32();
             WorldDatabase.PQuery("INSERT INTO custom_speedruns_runs (player, dungeon, tstart, bosses_left, keylevel, instanceid, dungeonlevel) VALUES ('" + pName + "','" + myMap->GetMapName() + "','" + std::to_string(GameTime::GetGameTime()) + "'," + std::to_string(maxBosses) + ", " + std::to_string(keyCount) + "," + std::to_string(myId) + "," + std::to_string(dungeonLevel) + ")");
             TC_LOG_DEBUG("LOG_LEVEL_DEBUG", "Mythic Dungeon: Player %s started a new a run.", pName);
@@ -302,6 +334,8 @@ public:
             // apply suffixes
             if (level >= 2) creature->AddAura(SPELL_EXTRA_1, creature);
             if (level >= 4) creature->AddAura(SPELL_EXTRA_2, creature);
+
+            creature->SetFullHealth();
         }
     }
 };
