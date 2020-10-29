@@ -30,10 +30,11 @@ enum SPELLS
     AURA_DMG_5          =       500101, //5% dmg (per stack)
 
     // extra spells
-    SPELL_EXTRA_1       =       500102, // dodge 25%
-    SPELL_EXTRA_2       =       500103,  // Ice Armor
-    
-    SPELL_EXTRA_4       =       1,
+    SPELL_EXTRA_1       =       500102, // Dodge 25%
+    SPELL_EXTRA_2       =       500103, // Ice Armor
+    SPELL_EXTRA_3       =       500106, // Aura of Darkness
+    SPELL_EXTRA_4       =       500108, // Entropic Aura
+    SPELL_EXTRA_5       =       500109, // Explode on Death
 };
 
 enum ITEMS

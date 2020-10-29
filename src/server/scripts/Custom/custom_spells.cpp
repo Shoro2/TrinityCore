@@ -17,7 +17,10 @@ public:
     void OnCreatureKill(Player* killer, Creature* killed) {
         // Skeleton Shot
         if (killed->HasAura(500537)) {
-            killer->CastSpell(killed->GetPosition(), 500539);
+            killer->SummonCreature(23389, killed->GetPosition(), TEMPSUMMON_TIMED_DESPAWN, 20s);
+        }
+        else if (killed->HasAura(500109)) {
+            killed->CastSpell(killed->GetPosition(), 500110);
         }
 
     }

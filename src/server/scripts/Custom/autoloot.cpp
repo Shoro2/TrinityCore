@@ -28,24 +28,27 @@ public:
         else {
             if (player->isAllowedToLoot(creature)) {
                 if (!loot->isLooted() && !loot->empty()) {
-
-                    //loot gold
-                    uint32 gold = loot->gold;
-                    if (gold > 0) {
-                        player->ModifyMoney(gold);
-                    }
-
                     //iterate over all available items
                     uint8 maxSlot = loot->GetMaxSlotInLootFor(player);
-                    for (int i = 0; i < maxSlot; ++i) {
-                        //the method name here is a bit misleading, it just returns the item at a specific slot of the loot list
-                        LootItem* item = loot->LootItemInSlot(i, player);
-                        //so you have to add the item manually
-                        player->AddItem(item->itemid, item->count);
+                    uint8 playerSlots = player->GetFreeInventorySpace();
+                    if (playerSlots > maxSlot) {
+                        //loot gold
+                        uint32 gold = loot->gold;
+                        if (gold > 0) {
+                            player->ModifyMoney(gold);
+                        }
+                        for (int i = 0; i < maxSlot; ++i) {
+                            //the method name here is a bit misleading, it just returns the item at a specific slot of the loot list
+                            LootItem* item = loot->LootItemInSlot(i, player);
+                            //so you have to add the item manually
+                            player->AddItem(item->itemid, item->count);
+                        }
+
+                        //because we don't remove the items as they are looted, clear the loot list
+                        loot->clear();
                     }
 
-                    //because we don't remove the items as they are looted, clear the loot list
-                    loot->clear();
+                    
                 }
             }
         }
